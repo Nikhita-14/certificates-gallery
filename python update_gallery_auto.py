@@ -2,17 +2,17 @@ import os
 import fitz  # PyMuPDF
 import subprocess
 
-# --- Config ---
-CERT_FOLDER = "certificates"                  # folder with your PDFs/images
-THUMB_FOLDER = os.path.join(CERT_FOLDER, "thumbnails")
-HTML_FILE = "index.html"                      # now at repo root
-AUTO_PUSH = True                              # True = push to GitHub automatically
+# --- Configuration ---
+ROOT_FOLDER = os.getcwd()  # "Gained Certificates"
+THUMB_FOLDER = os.path.join(ROOT_FOLDER, "thumbnails")
+HTML_FILE = os.path.join(ROOT_FOLDER, "index.html")
+AUTO_PUSH = True
 COMMIT_MESSAGE = "Auto-update certificates gallery"
 
-# --- Ensure thumbnails folder exists ---
+# --- Create thumbnails folder if it doesn't exist ---
 os.makedirs(THUMB_FOLDER, exist_ok=True)
 
-# --- Function to generate PDF thumbnail ---
+# --- Function to generate PDF thumbnails ---
 def generate_pdf_thumb(pdf_path):
     base_name = os.path.splitext(os.path.basename(pdf_path))[0]
     thumb_path = os.path.join(THUMB_FOLDER, f"{base_name}_Thumb.png")
@@ -25,7 +25,7 @@ def generate_pdf_thumb(pdf_path):
         print(f"Generated thumbnail for {pdf_path}")
     return thumb_path
 
-# --- Generate dynamic HTML ---
+# --- Generate HTML ---
 html_content = """<!DOCTYPE html>
 <html>
 <head>
@@ -43,20 +43,16 @@ html_content = """<!DOCTYPE html>
 <h1>My Certificates</h1>
 """
 
-# --- Scan folder ---
-files = os.listdir(CERT_FOLDER)
-files.sort()
-
-for f in files:
-    path = os.path.join(CERT_FOLDER, f)
+# --- Scan the folder for images and PDFs ---
+for f in sorted(os.listdir(ROOT_FOLDER)):
+    path = os.path.join(ROOT_FOLDER, f)
     if os.path.isfile(path):
         ext = f.lower().split('.')[-1]
         if ext in ["png", "jpg", "jpeg"]:
-            # Image certificate
             html_content += f"""
     <div class="cert">
-        <a href="{CERT_FOLDER}/{f}" target="_blank">
-            <img src="{CERT_FOLDER}/{f}" alt="{f}">
+        <a href="{f}" target="_blank">
+            <img src="{f}" alt="{f}">
             <p>{os.path.splitext(f)[0]}</p>
         </a>
     </div>
@@ -65,33 +61,29 @@ for f in files:
             thumb_path = generate_pdf_thumb(path)
             html_content += f"""
     <div class="cert">
-        <a href="{CERT_FOLDER}/{f}" target="_blank">
-            <img src="{CERT_FOLDER}/thumbnails/{os.path.basename(thumb_path)}" alt="{f}">
+        <a href="{f}" target="_blank">
+            <img src="thumbnails/{os.path.basename(thumb_path)}" alt="{f}">
             <p>{os.path.splitext(f)[0]}</p>
         </a>
     </div>
 """
 
-# --- HTML footer ---
 html_content += """
 </body>
 </html>
 """
 
-# --- Write HTML to root ---
+# --- Write index.html ---
 with open(HTML_FILE, "w", encoding="utf-8") as f:
     f.write(html_content)
 
 print(f"Gallery updated: {HTML_FILE}")
 
-# --- Git automatic commit & push ---
+# --- Optional: auto Git commit & push ---
 if AUTO_PUSH:
     try:
-        # Stage all changes including deletions
         subprocess.run(["git", "add", "-A"], check=True)
-        # Commit with preset message
         subprocess.run(["git", "commit", "-m", COMMIT_MESSAGE], check=True)
-        # Push to remote
         subprocess.run(["git", "push"], check=True)
         print("Changes pushed to GitHub!")
     except subprocess.CalledProcessError as e:
